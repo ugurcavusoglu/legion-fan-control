@@ -1,0 +1,242 @@
+﻿<Window x:Class="LegionFanControl.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:LegionFanControl.ViewModels"
+        xmlns:conv="clr-namespace:LegionFanControl.Converters"
+        xmlns:models="clr-namespace:LegionFanControl.Models"
+        Title="Legion Fan Control"
+        Height="580" Width="820"
+        MinHeight="580" MinWidth="820"
+        Background="{StaticResource BackgroundBrush}"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanMinimize">
+
+    <Window.DataContext>
+        <vm:MainViewModel/>
+    </Window.DataContext>
+
+    <Window.Resources>
+        <conv:ThermalModeToActiveStyleConverter x:Key="ModeStyleConv"/>
+        <conv:TempToColorConverter x:Key="TempColorConv"/>
+    </Window.Resources>
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="16"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="16"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="16"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="LEGION FAN CONTROL"
+                           FontSize="22" FontWeight="Bold"
+                           Foreground="{StaticResource TextPrimaryBrush}"/>
+                <TextBlock Text="Lenovo Legion Thermal Management"
+                           FontSize="12"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           Margin="0,2,0,0"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Ellipse Width="8" Height="8" Margin="0,0,6,0"
+                         Fill="{Binding IsWmiAvailable, Converter={StaticResource TempColorConv}}"/>
+                <TextBlock Text="{Binding StatusMessage}"
+                           FontSize="12"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Temperature + Fan Cards -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- CPU Card -->
+            <Border Grid.Column="0" Background="{StaticResource CardBrush}"
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                    CornerRadius="12" Padding="20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="8"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="16"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="8"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="CPU" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" VerticalAlignment="Bottom">
+                        <TextBlock FontSize="48" FontWeight="Bold" LineHeight="48"
+                                   Foreground="{Binding CpuTemp, Converter={StaticResource TempColorConv}}"
+                                   Text="{Binding CpuTemp, StringFormat={}{0:F0}}"/>
+                        <TextBlock Text="&#176;C" FontSize="20" FontWeight="Light"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   VerticalAlignment="Bottom" Margin="4,0,0,6"/>
+                    </StackPanel>
+                    <Separator Grid.Row="3" Background="{StaticResource BorderBrush}" Margin="-20,0"/>
+                    <TextBlock Grid.Row="4" Text="FAN SPEED" FontSize="10"
+                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <StackPanel Grid.Row="6" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock FontSize="24" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   Text="{Binding CpuFanRpm}"/>
+                        <TextBlock Text=" RPM" FontSize="13"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   VerticalAlignment="Bottom" Margin="0,0,0,2"/>
+                        <TextBlock FontSize="13" Foreground="{StaticResource AccentBrush}"
+                                   VerticalAlignment="Bottom" Margin="8,0,0,2"
+                                   Text="{Binding CpuFanPercent, StringFormat={}({0}%)}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- GPU Card -->
+            <Border Grid.Column="2" Background="{StaticResource CardBrush}"
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                    CornerRadius="12" Padding="20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="8"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="16"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="8"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="GPU" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" VerticalAlignment="Bottom">
+                        <TextBlock FontSize="48" FontWeight="Bold" LineHeight="48"
+                                   Foreground="{Binding GpuTemp, Converter={StaticResource TempColorConv}}"
+                                   Text="{Binding GpuTemp, StringFormat={}{0:F0}}"/>
+                        <TextBlock Text="&#176;C" FontSize="20" FontWeight="Light"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   VerticalAlignment="Bottom" Margin="4,0,0,6"/>
+                    </StackPanel>
+                    <Separator Grid.Row="3" Background="{StaticResource BorderBrush}" Margin="-20,0"/>
+                    <TextBlock Grid.Row="4" Text="FAN SPEED" FontSize="10"
+                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <StackPanel Grid.Row="6" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock FontSize="24" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   Text="{Binding GpuFanRpm}"/>
+                        <TextBlock Text=" RPM" FontSize="13"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   VerticalAlignment="Bottom" Margin="0,0,0,2"/>
+                        <TextBlock FontSize="13" Foreground="{StaticResource AccentBrush}"
+                                   VerticalAlignment="Bottom" Margin="8,0,0,2"
+                                   Text="{Binding GpuFanPercent, StringFormat={}({0}%)}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Thermal Mode -->
+        <Border Grid.Row="4" Background="{StaticResource CardBrush}"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                CornerRadius="12" Padding="20">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="14"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="THERMAL MODE" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                <UniformGrid Grid.Row="2" Columns="3">
+                    <Button Margin="0,0,6,0"
+                            Command="{Binding SetThermalModeCommand}"
+                            CommandParameter="{x:Static models:ThermalMode.Quiet}"
+                            Padding="20,12">
+                        <Button.Style>
+                            <MultiBinding Converter="{StaticResource ModeStyleConv}"
+                                          ConverterParameter="Quiet">
+                                <Binding Path="CurrentThermalMode"/>
+                                <Binding Path="CurrentThermalMode"/>
+                            </MultiBinding>
+                        </Button.Style>
+                        <StackPanel>
+                            <TextBlock Text="&#x1F319;" FontSize="18" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Quiet" FontSize="13" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                            <TextBlock Text="Silent &amp; cool" FontSize="10"
+                                       HorizontalAlignment="Center"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Margin="6,0,6,0"
+                            Command="{Binding SetThermalModeCommand}"
+                            CommandParameter="{x:Static models:ThermalMode.Balanced}"
+                            Padding="20,12">
+                        <Button.Style>
+                            <MultiBinding Converter="{StaticResource ModeStyleConv}"
+                                          ConverterParameter="Balanced">
+                                <Binding Path="CurrentThermalMode"/>
+                                <Binding Path="CurrentThermalMode"/>
+                            </MultiBinding>
+                        </Button.Style>
+                        <StackPanel>
+                            <TextBlock Text="&#x2696;&#xFE0F;" FontSize="18" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Balanced" FontSize="13" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                            <TextBlock Text="Performance &amp; efficiency" FontSize="10"
+                                       HorizontalAlignment="Center"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Margin="6,0,0,0"
+                            Command="{Binding SetThermalModeCommand}"
+                            CommandParameter="{x:Static models:ThermalMode.Performance}"
+                            Padding="20,12">
+                        <Button.Style>
+                            <MultiBinding Converter="{StaticResource ModeStyleConv}"
+                                          ConverterParameter="Performance">
+                                <Binding Path="CurrentThermalMode"/>
+                                <Binding Path="CurrentThermalMode"/>
+                            </MultiBinding>
+                        </Button.Style>
+                        <StackPanel>
+                            <TextBlock Text="&#x1F525;" FontSize="18" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Performance" FontSize="13" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                            <TextBlock Text="Maximum power" FontSize="10"
+                                       HorizontalAlignment="Center"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Button>
+                </UniformGrid>
+            </Grid>
+        </Border>
+
+        <!-- Footer -->
+        <Grid Grid.Row="6" VerticalAlignment="Bottom">
+            <TextBlock Text="Legion Fan Control — Open Source (MIT)"
+                       FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
+                       HorizontalAlignment="Left"/>
+            <TextBlock Text="Updates every 2 seconds"
+                       FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
+                       HorizontalAlignment="Right"/>
+        </Grid>
+    </Grid>
+</Window>
