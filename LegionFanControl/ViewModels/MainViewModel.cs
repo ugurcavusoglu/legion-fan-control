@@ -9,6 +9,7 @@ namespace LegionFanControl.ViewModels;
 public partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly WmiService _wmi;
+    private readonly HardwareMonitorService _hwMonitor;
     private readonly DispatcherTimer _timer;
 
     [ObservableProperty] private int _cpuFanRpm;
@@ -24,17 +25,19 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public MainViewModel()
     {
         _wmi = new WmiService();
+        _hwMonitor = new HardwareMonitorService();
+
         IsWmiAvailable = _wmi.IsAvailable;
         StatusMessage = _wmi.IsAvailable ? "Connected" : "WMI unavailable — run as Administrator";
+
+        if (_wmi.IsAvailable)
+            CurrentThermalMode = _wmi.GetThermalMode();
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
         _timer.Tick += (_, _) => Refresh();
         _timer.Start();
 
         Refresh();
-
-        if (_wmi.IsAvailable)
-            CurrentThermalMode = _wmi.GetThermalMode();
     }
 
     private void Refresh()
@@ -45,7 +48,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         CpuFanPercent = fans.CpuFanPercent;
         GpuFanPercent = fans.GpuFanPercent;
 
-        var temps = _wmi.GetTemperatureData();
+        var temps = _hwMonitor.GetTemperatures();
         CpuTemp = temps.CpuTemp;
         GpuTemp = temps.GpuTemp;
     }
@@ -64,5 +67,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         _timer.Stop();
         _wmi.Dispose();
+        _hwMonitor.Dispose();
     }
 }

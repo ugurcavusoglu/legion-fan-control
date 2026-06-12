@@ -21,24 +21,36 @@ public class WmiService : IDisposable
     {
         try
         {
-            _fanMethod = new ManagementObject(
-                new ManagementScope(WmiNamespace),
-                new ManagementPath("LENOVO_FAN_METHOD.InstanceName='ACPI\\PNP0C14\\0_0'"),
-                null);
-            _fanMethod.Get();
+            var scope = new ManagementScope(WmiNamespace);
 
-            _gameZoneData = new ManagementObject(
-                new ManagementScope(WmiNamespace),
-                new ManagementPath("LENOVO_GAMEZONE_DATA.InstanceName='ACPI\\PNP0C14\\0_0'"),
-                null);
-            _gameZoneData.Get();
+            using var fanQuery = new ManagementObjectSearcher(scope,
+                new ObjectQuery("SELECT * FROM LENOVO_FAN_METHOD"));
+            _fanMethod = fanQuery.Get().OfType<ManagementObject>().FirstOrDefault();
 
-            IsAvailable = true;
+            using var zoneQuery = new ManagementObjectSearcher(scope,
+                new ObjectQuery("SELECT * FROM LENOVO_GAMEZONE_DATA"));
+            _gameZoneData = zoneQuery.Get().OfType<ManagementObject>().FirstOrDefault();
+
+            IsAvailable = _fanMethod != null && _gameZoneData != null;
         }
         catch
         {
             IsAvailable = false;
         }
+    }
+
+    private int InvokeFanSpeed(byte fanId)
+    {
+        var inParams = _fanMethod!.GetMethodParameters("Fan_GetCurrentFanSpeed");
+        inParams["FanID"] = fanId;
+        var outParams = _fanMethod.InvokeMethod("Fan_GetCurrentFanSpeed", inParams, null);
+        return Convert.ToInt32(outParams["CurrentFanSpeed"]);
+    }
+
+    private int InvokeIntResult(ManagementObject obj, string method, string resultProperty)
+    {
+        var outParams = obj.InvokeMethod(method, null, null);
+        return Convert.ToInt32(outParams[resultProperty]);
     }
 
     public FanData GetFanData()
@@ -47,49 +59,22 @@ public class WmiService : IDisposable
 
         try
         {
-            var result = new FanData();
+            int cpuRpm = InvokeFanSpeed(0);
+            int gpuRpm = InvokeFanSpeed(1);
 
-            var cpuFanResult = _fanMethod!.InvokeMethod("Fan_GetCurrentFanSpeed", new object[] { 0 });
-            var gpuFanResult = _fanMethod!.InvokeMethod("Fan_GetCurrentFanSpeed", new object[] { 1 });
+            const int maxRpm = 5000;
 
-            result.CpuFanRpm = Convert.ToInt32(cpuFanResult);
-            result.GpuFanRpm = Convert.ToInt32(gpuFanResult);
-
-            var cpuMaxResult = _fanMethod!.InvokeMethod("Fan_GetMaxFanSpeed", new object[] { 0 });
-            var gpuMaxResult = _fanMethod!.InvokeMethod("Fan_GetMaxFanSpeed", new object[] { 1 });
-
-            int cpuMax = Convert.ToInt32(cpuMaxResult);
-            int gpuMax = Convert.ToInt32(gpuMaxResult);
-
-            result.CpuFanPercent = cpuMax > 0 ? (int)((double)result.CpuFanRpm / cpuMax * 100) : 0;
-            result.GpuFanPercent = gpuMax > 0 ? (int)((double)result.GpuFanRpm / gpuMax * 100) : 0;
-
-            return result;
-        }
-        catch
-        {
-            return GetMockFanData();
-        }
-    }
-
-    public TemperatureData GetTemperatureData()
-    {
-        if (!IsAvailable) return GetMockTempData();
-
-        try
-        {
-            var cpuTemp = _gameZoneData!.InvokeMethod("GetCPUTemp", null);
-            var gpuTemp = _gameZoneData!.InvokeMethod("GetGPUTemp", null);
-
-            return new TemperatureData
+            return new FanData
             {
-                CpuTemp = Convert.ToDouble(cpuTemp),
-                GpuTemp = Convert.ToDouble(gpuTemp)
+                CpuFanRpm = cpuRpm,
+                GpuFanRpm = gpuRpm,
+                CpuFanPercent = Math.Clamp(cpuRpm * 100 / maxRpm, 0, 100),
+                GpuFanPercent = Math.Clamp(gpuRpm * 100 / maxRpm, 0, 100),
             };
         }
         catch
         {
-            return GetMockTempData();
+            return GetMockFanData();
         }
     }
 
@@ -99,8 +84,7 @@ public class WmiService : IDisposable
 
         try
         {
-            var result = _gameZoneData!.InvokeMethod("GetSmartFanMode", null);
-            int mode = Convert.ToInt32(result);
+            int mode = InvokeIntResult(_gameZoneData!, "GetSmartFanMode", "Data");
             return mode switch
             {
                 0 => ThermalMode.Quiet,
@@ -131,7 +115,9 @@ public class WmiService : IDisposable
                 _ => 1
             };
 
-            _gameZoneData!.InvokeMethod("SetSmartFanMode", new object[] { modeValue });
+            var inParams = _gameZoneData!.GetMethodParameters("SetSmartFanMode");
+            inParams["Data"] = (uint)modeValue;
+            _gameZoneData.InvokeMethod("SetSmartFanMode", inParams, null);
             return true;
         }
         catch
@@ -140,23 +126,6 @@ public class WmiService : IDisposable
         }
     }
 
-    public bool SetFanSpeed(int fanIndex, int percent)
-    {
-        if (!IsAvailable) return false;
-
-        try
-        {
-            percent = Math.Clamp(percent, 0, 100);
-            _fanMethod!.InvokeMethod("Fan_SetSpeed", new object[] { fanIndex, percent });
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    // Returns simulated data when not running as admin or on unsupported hardware
     private static FanData GetMockFanData() => new()
     {
         CpuFanRpm = 0,
